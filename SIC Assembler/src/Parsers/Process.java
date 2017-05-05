@@ -11,6 +11,7 @@ public class Process {
     ArrayList<String> code;
     int start = 0;
     boolean isIndex = false;
+    boolean error = false;
     String[][] intermediateFile;
     String[][] listingFile;
     String ObjectFile = "";
@@ -30,10 +31,14 @@ public class Process {
         SYMTable = new Hashtable<String, Integer>();
         intermediateFile = new String[code.size()][2];
         listingFile = new String[code.size()][3];
-        fillOPTable();
-        prs1();
-        prs2();
-        makeListingGood();
+        if(!error)
+            fillOPTable();
+        if(!error)
+            prs1();
+        if (!error)
+            prs2();
+        if (!error)
+            makeListingGood();
     }
 
     private void makeListingGood() {
@@ -81,16 +86,29 @@ public class Process {
             intermediateFile[start][0] = "";
             start++;
         }
-        pattern = Pattern.compile("(?i)(\\w+)?\\s+(\\w+)\\s+(.+)?");
+        if(!code.get(code.size() - 1).toLowerCase().contains("end")) {
+            Exception e = new Exception("There isn't end statement in  the program");
+            e.printStackTrace();
+            System.exit(0);
+        }
+        pattern = Pattern.compile("(?i)(\\w+)?\\s+(\\w+)\\s*(.+)?");
         matcher = pattern.matcher(code.get(start).toLowerCase());
         if (matcher.find()) {
             if (matcher.group(2).toLowerCase().equals("start")) {
                 startingAddress = convert.hexaToDecimal(matcher.group(3).trim());
                 LOCCRT = startingAddress;
+                if((startingAddress+"").length() > 4) {
+                    Exception e = new Exception("Out of Range Address");
+                    e.printStackTrace();
+                    System.exit(0);
+                }
                 intermediateFile[start][1] = code.get(start);
                 intermediateFile[start][0] = makeGoodShape(convert.decimalToHexa(startingAddress));
             } else {
                 LOCCRT = 0;
+                Exception e = new Exception("Invalid Operation Code : The operation : "+ matcher.group(2)+" in line " + 1 + " is Undefiend it should be START");
+                e.printStackTrace();
+                System.exit(0);
             }
         }
         for (int i = start + 1; i < code.size() - 1; i++) {
@@ -101,9 +119,12 @@ public class Process {
                     intermediateFile[i][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
                     if (matcher.group(1) != null) {
                         if (SYMTable.contains(matcher.group(1).toLowerCase())) {
-                            Exception e = new Exception("There is the same Symbole before");
+                            Exception e = new Exception("There is the same Symbole before : The sympole " + matcher.group(1) + " in line " + (i + 1) + " is duplicated");
                             e.printStackTrace();
-                        } else {
+                            System.exit(0);
+                            error = true;
+                            return;
+                            } else {
                             SYMTable.put(matcher.group(1).toLowerCase(), LOCCRT);
                         }
                     }
@@ -125,8 +146,11 @@ public class Process {
                             LOCCRT += ((word.length() - 3) % 2 == 0)?  (word.length() - 3) / 2 : (word.length() - 3) / 2 + 1;
                         }
                     } else {
-                        Exception e = new Exception("Invalid Operation Code");
+                        Exception e = new Exception("Invalid Operation Code : The operation : "+ operation+" in line " + (i + 1) + " is Undefiend");
                         e.printStackTrace();
+                        System.exit(0);
+                        error = true;
+                        return;
                     }
                 } else {
                     intermediateFile[i][1] = code.get(i);
@@ -194,8 +218,11 @@ public class Process {
                                 isIndex = true;
                             } else {
                                 operandAddress = "0";
-                                Exception e = new Exception("Invalid Address");
+                                Exception e = new Exception("Invalid Address : The Lable : " + operand.toUpperCase() +" in line " + (i + 1) + " Didn't exsist");
                                 e.printStackTrace();
+                                System.exit(0);
+                                error = true;
+                                return;
                             }
                         } else {
                             listingFile[i][0] = intermediateFile[i][0].toUpperCase();
@@ -222,7 +249,7 @@ public class Process {
                     if (counter > 10) {
                         counter = 1;
                         // writeTextRecordToObjectProg();
-                        ObjectFile += goodLen(convert.decimalToHexa(tempObj.length() / 2)).toUpperCase() + tempObj;
+                        ObjectFile += goodLen(convert.decimalToHexa((tempObj.length() % 2 == 0)? tempObj.length() / 2 : tempObj.length() / 2 + 1)).toUpperCase() + tempObj;
                         tempObj = "";
                         intializeFirstTextrec(i,matcher.group(2).toLowerCase(), intermediateFile[i][0]);
                     }
@@ -232,7 +259,7 @@ public class Process {
             }
         }
         if(counter != 0) {
-            ObjectFile += goodLen(convert.decimalToHexa(tempObj.length() / 2)).toUpperCase() + tempObj;
+            ObjectFile += goodLen(convert.decimalToHexa((tempObj.length() % 2 == 0)? tempObj.length() / 2 : tempObj.length() / 2 + 1)).toUpperCase() + tempObj;
             tempObj = "";
         }
         // writeLastTextRectoObjPro();
@@ -391,7 +418,7 @@ public class Process {
 
     public static void main(String[] args) {
         FilesHandler file = new FilesHandler();
-        ArrayList<String> code = file.readFile(new File("C:\\sic\\Exmpls\\ars.txt"));
+        ArrayList<String> code = file.readFile(new File("C:\\Users\\Ahmed Maghawry\\Documents\\Desktop\\tests\\SIC-Example.txt"));
         for (String x : code)
             System.out.println(x);
         Process pross = new Process(code);

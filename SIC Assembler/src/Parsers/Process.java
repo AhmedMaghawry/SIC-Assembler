@@ -1,17 +1,22 @@
 package Parsers;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JTextField;
 
 public class Process {
 
     ArrayList<String> code;
     int start = 0;
     boolean isIndex = false;
-    boolean error = false;
     String[][] intermediateFile;
     String[][] listingFile;
     String ObjectFile = "";
@@ -23,26 +28,74 @@ public class Process {
     Converter convert;
     Pattern pattern;
     Matcher matcher;
+    static FilesHandler fileHandler;
 
-    public Process(ArrayList<String> code) {
+    public Process(ArrayList<String> code, String fileName) {
         this.code = code;
+        checkSpaces(code);
         convert = new Converter();
         OPTable = new Hashtable<String, Integer>();
         SYMTable = new Hashtable<String, Integer>();
         intermediateFile = new String[code.size()][2];
         listingFile = new String[code.size()][3];
-        if(!error)
-            fillOPTable();
-        if(!error)
-            prs1();
-        if (!error)
-            prs2();
-        if (!error)
-            makeListingGood();
+        fillOPTable();
+        prs1();
+        prs2();
+        makeListingGood();
+        fileHandler = new FilesHandler();
+        try {
+            fileHandler.saveObjectFile(listingFile, ObjectFile, fileName);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    private void checkSpaces(ArrayList<String> code2) {
+        Pattern patternSpaces = Pattern.compile("(?i)(.{8})\\s(.{2,6})\\s{0,2}(.{0,18})(.{0,31})");
+        for(int i = 0; i < code2.size(); i++) {
+            if(!code2.get(i).startsWith(".")) {
+            Matcher matchSpace = patternSpaces.matcher(code2.get(i).replaceAll("\t", "    "));
+            if(matchSpace.find()) {
+                String lable = matchSpace.group(1);
+                String operation = matchSpace.group(2);
+                String operand = matchSpace.group(3);
+                if (lable != null) {
+                    lable = lable.trim();
+                    if(lable.contains(" ")){
+                        Exception e = new Exception("Syntax error in line : " + (i+1));
+                        e.printStackTrace();
+                        System.exit(0);
+                    }
+                } else {
+                    Exception e = new Exception("Syntax error in line : " + (i+1));
+                    e.printStackTrace();
+                    System.exit(0);
+                }
+                if(operation == null) {
+                    Exception e = new Exception("There is no operation in line : " + (i+1));
+                    e.printStackTrace();
+                    System.exit(0);
+                }
+                if (operand != null) {
+                    operand = operand.trim();
+                    if(operand.contains(" ")){
+                        Exception e = new Exception("Syntax error in line : " + (i+1));
+                        e.printStackTrace();
+                        System.exit(0);
+                    }
+                }
+            } else {
+                Exception e = new Exception("Syntax error in line : " + (i+1));
+                e.printStackTrace();
+                System.exit(0);
+            }
+        }
+        }
     }
 
     private void makeListingGood() {
-        for(int i = 0; i < listingFile.length; i++) {
+        for (int i = 0; i < listingFile.length; i++) {
             if (listingFile[i][0] == null)
                 listingFile[i][0] = "";
             if (listingFile[i][1] == null)
@@ -86,7 +139,7 @@ public class Process {
             intermediateFile[start][0] = "";
             start++;
         }
-        if(!code.get(code.size() - 1).toLowerCase().contains("end")) {
+        if (!code.get(code.size() - 1).toLowerCase().contains("end")) {
             Exception e = new Exception("There isn't end statement in  the program");
             e.printStackTrace();
             System.exit(0);
@@ -97,7 +150,7 @@ public class Process {
             if (matcher.group(2).toLowerCase().equals("start")) {
                 startingAddress = convert.hexaToDecimal(matcher.group(3).trim());
                 LOCCRT = startingAddress;
-                if((startingAddress+"").length() > 4) {
+                if ((startingAddress + "").length() > 4) {
                     Exception e = new Exception("Out of Range Address");
                     e.printStackTrace();
                     System.exit(0);
@@ -106,7 +159,8 @@ public class Process {
                 intermediateFile[start][0] = makeGoodShape(convert.decimalToHexa(startingAddress));
             } else {
                 LOCCRT = 0;
-                Exception e = new Exception("Invalid Operation Code : The operation : "+ matcher.group(2)+" in line " + 1 + " is Undefiend it should be START");
+                Exception e = new Exception("Invalid Operation Code : The operation : " + matcher.group(2) + " in line "
+                        + 1 + " is Undefiend it should be START");
                 e.printStackTrace();
                 System.exit(0);
             }
@@ -119,12 +173,11 @@ public class Process {
                     intermediateFile[i][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
                     if (matcher.group(1) != null) {
                         if (SYMTable.contains(matcher.group(1).toLowerCase())) {
-                            Exception e = new Exception("There is the same Symbole before : The sympole " + matcher.group(1) + " in line " + (i + 1) + " is duplicated");
+                            Exception e = new Exception("There is the same Symbole before : The sympole "
+                                    + matcher.group(1) + " in line " + (i + 1) + " is duplicated");
                             e.printStackTrace();
                             System.exit(0);
-                            error = true;
-                            return;
-                            } else {
+                        } else {
                             SYMTable.put(matcher.group(1).toLowerCase(), LOCCRT);
                         }
                     }
@@ -143,14 +196,14 @@ public class Process {
                             LOCCRT += word.length() - 3;
                         } else if (matcher.group(3).toLowerCase().startsWith("x")) {
                             String word = matcher.group(3).toLowerCase().trim();
-                            LOCCRT += ((word.length() - 3) % 2 == 0)?  (word.length() - 3) / 2 : (word.length() - 3) / 2 + 1;
+                            LOCCRT += ((word.length() - 3) % 2 == 0) ? (word.length() - 3) / 2
+                                    : (word.length() - 3) / 2 + 1;
                         }
                     } else {
-                        Exception e = new Exception("Invalid Operation Code : The operation : "+ operation+" in line " + (i + 1) + " is Undefiend");
+                        Exception e = new Exception("Invalid Operation Code : The operation : " + operation
+                                + " in line " + (i + 1) + " is Undefiend");
                         e.printStackTrace();
                         System.exit(0);
-                        error = true;
-                        return;
                     }
                 } else {
                     intermediateFile[i][1] = code.get(i);
@@ -197,7 +250,7 @@ public class Process {
                     // String sympole = (matcher.group(1) != null)?
                     // matcher.group(1).toLowerCase() : null;
                     String operand = matcher.group(3);
-                    if(operand != null) {
+                    if (operand != null) {
                         operand = operand.toLowerCase().trim();
                     }
                     if (OPTable.containsKey(operation)) {
@@ -211,18 +264,18 @@ public class Process {
                                 listingFile[i][0] = intermediateFile[i][0].toUpperCase();
                                 listingFile[i][2] = intermediateFile[i][1];
                                 operandAddress = operand.substring(2, operand.length());
-                            } else if(operand.toLowerCase().contains(",x")) {
+                            } else if (operand.toLowerCase().contains(",x")) {
                                 listingFile[i][0] = intermediateFile[i][0].toUpperCase();
                                 listingFile[i][2] = intermediateFile[i][1];
-                                operandAddress = convert.decimalToHexa(SYMTable.get(operand.substring(0, operand.length() - 2))) + "";
+                                operandAddress = convert
+                                        .decimalToHexa(SYMTable.get(operand.substring(0, operand.length() - 2))) + "";
                                 isIndex = true;
                             } else {
                                 operandAddress = "0";
-                                Exception e = new Exception("Invalid Address : The Lable : " + operand.toUpperCase() +" in line " + (i + 1) + " Didn't exsist");
+                                Exception e = new Exception("Invalid Address : The Lable : " + operand.toUpperCase()
+                                        + " in line " + (i + 1) + " Didn't exsist");
                                 e.printStackTrace();
                                 System.exit(0);
-                                error = true;
-                                return;
                             }
                         } else {
                             listingFile[i][0] = intermediateFile[i][0].toUpperCase();
@@ -249,32 +302,42 @@ public class Process {
                     if (counter > 10) {
                         counter = 1;
                         // writeTextRecordToObjectProg();
-                        ObjectFile += goodLen(convert.decimalToHexa((tempObj.length() % 2 == 0)? tempObj.length() / 2 : tempObj.length() / 2 + 1)).toUpperCase() + tempObj;
+                        ObjectFile += goodLen(convert.decimalToHexa(
+                                (tempObj.length() % 2 == 0) ? tempObj.length() / 2 : tempObj.length() / 2 + 1))
+                                        .toUpperCase()
+                                + tempObj;
                         tempObj = "";
-                        intializeFirstTextrec(i,matcher.group(2).toLowerCase(), intermediateFile[i][0]);
+                        intializeFirstTextrec(i, matcher.group(2).toLowerCase(), intermediateFile[i][0]);
                     }
-                    //addToObjectF(listingFile[i][1]);
+                    // addToObjectF(listingFile[i][1]);
                     tempObj += listingFile[i][1];
+                } else {
+                    listingFile[i][0] = code.get(i);
+                    listingFile[i][1] = "";
+                    listingFile[i][2] = "";
                 }
             }
         }
-        if(counter != 0) {
-            ObjectFile += goodLen(convert.decimalToHexa((tempObj.length() % 2 == 0)? tempObj.length() / 2 : tempObj.length() / 2 + 1)).toUpperCase() + tempObj;
+        if (counter != 0) {
+            ObjectFile += goodLen(convert
+                    .decimalToHexa((tempObj.length() % 2 == 0) ? tempObj.length() / 2 : tempObj.length() / 2 + 1))
+                            .toUpperCase()
+                    + tempObj;
             tempObj = "";
         }
         // writeLastTextRectoObjPro();
         writeEndRectoObjPro();
     }
 
-    /*private void addToObjectF(String objectCode) {
-        if (!objectCode.equals("")) {
-            /*for (int i = 0; i < 6 - objectCode.length(); i++) {
-                ObjectFile += "0";
-            }*/
-            /*ObjectFile += objectCode.toUpperCase();
-        }
-    }*/
-    
+    /*
+     * private void addToObjectF(String objectCode) { if
+     * (!objectCode.equals("")) { /*for (int i = 0; i < 6 - objectCode.length();
+     * i++) { ObjectFile += "0"; }
+     */
+    /*
+     * ObjectFile += objectCode.toUpperCase(); } }
+     */
+
     private String goodLen(String x) {
         String res = "";
         for (int i = 0; i < 2 - x.length(); i++) {
@@ -285,7 +348,7 @@ public class Process {
     }
 
     private void writeEndRectoObjPro() {
-        ObjectFile += "\n" + "E";
+        ObjectFile += System.lineSeparator() + "E";
         String startAdd = convert.decimalToHexa(startingAddress);
         for (int i = 0; i < 6 - startAdd.length(); i++) {
             ObjectFile += "0";
@@ -339,7 +402,7 @@ public class Process {
         triv += temp;
         String resOperation = "";
         String operationST = convert.decimalToHexa(OPTable.get(operation));
-        for(int i = 0; i < 2 - operationST.length(); i++)
+        for (int i = 0; i < 2 - operationST.length(); i++)
             resOperation += "0";
         resOperation += operationST;
         String res = resOperation + makeItGood(convert.binToHexa(triv));
@@ -354,7 +417,7 @@ public class Process {
         res += operandAddress;
         return res;
     }
-    
+
     private String makeItGood2(String operandAddress) {
         String res = "";
         for (int i = 0; i < 6 - operandAddress.length(); i++) {
@@ -364,29 +427,20 @@ public class Process {
         return res;
     }
 
-    /*private int getContLength(int start) {
-        int counter = 0;
-        for (int i = start; i < start + 10; i++) {
-            matcher = pattern.matcher(code.get(i).toLowerCase());
-            if (matcher.find()) {
-                if (!code.get(i).startsWith(".")) {
-                    String operation = matcher.group(2).toLowerCase();
-                    if (OPTable.containsKey(operation) || operation.equals("word") || operation.equals("byte")) {
-                        counter++;
-                    } else if (operation.equals("resb") || operation.equals("resw")) {
-                        // do Nothing
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-        return counter * 3;
-    }*/
+    /*
+     * private int getContLength(int start) { int counter = 0; for (int i =
+     * start; i < start + 10; i++) { matcher =
+     * pattern.matcher(code.get(i).toLowerCase()); if (matcher.find()) { if
+     * (!code.get(i).startsWith(".")) { String operation =
+     * matcher.group(2).toLowerCase(); if (OPTable.containsKey(operation) ||
+     * operation.equals("word") || operation.equals("byte")) { counter++; } else
+     * if (operation.equals("resb") || operation.equals("resw")) { // do Nothing
+     * } else { break; } } } } return counter * 3; }
+     */
 
     private void intializeFirstTextrec(int i2, String operation, String address) {
         if (!operation.equals("resw") && !operation.equals("resb")) {
-            ObjectFile += "\n" + "T";
+            ObjectFile += System.lineSeparator() + "T";
             for (int i = 0; i < 6 - address.length(); i++)
                 ObjectFile += "0";
             ObjectFile += address.toUpperCase();
@@ -417,11 +471,21 @@ public class Process {
     }
 
     public static void main(String[] args) {
-        FilesHandler file = new FilesHandler();
-        ArrayList<String> code = file.readFile(new File("C:\\Users\\Ahmed Maghawry\\Documents\\Desktop\\tests\\SIC-Example.txt"));
+        fileHandler = new FilesHandler();
+        JFrame frame = new JFrame("SIC");
+        frame.setVisible(true);
+        JTextField btn = new JTextField();
+        frame.getContentPane().add(btn);
+        frame.setSize(100, 100);
+        JFileChooser fileCho = new JFileChooser();
+        fileCho.showOpenDialog(frame);
+        File getFile = fileCho.getSelectedFile();
+        String fileName = getFile.getName();
+        ArrayList<String> code = fileHandler
+                .readFile(getFile);
         for (String x : code)
             System.out.println(x);
-        Process pross = new Process(code);
+        Process pross = new Process(code, fileName);
         String[][] y = pross.intermediateFile;
         System.out.println("The Intermidiate file :");
         for (int i = 0; i < y.length; i++) {
@@ -435,5 +499,7 @@ public class Process {
         }
         System.out.println("------------");
         System.out.println(pross.ObjectFile);
+        btn.setEditable(false);
+        btn.setText("Done");
     }
 }

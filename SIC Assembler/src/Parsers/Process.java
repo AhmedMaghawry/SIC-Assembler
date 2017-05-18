@@ -17,6 +17,9 @@ public class Process {
     ArrayList<String> code;
     int start = 0;
     boolean isIndex = false;
+    boolean error = false;
+    String errorMessage;
+    int errorIndex;
     String[][] intermediateFile;
     String[][] listingFile;
     String ObjectFile = "";
@@ -40,57 +43,104 @@ public class Process {
         listingFile = new String[code.size()][3];
         fillOPTable();
         prs1();
-        prs2();
-        makeListingGood();
-        fileHandler = new FilesHandler();
-        try {
-            fileHandler.saveObjectFile(listingFile, ObjectFile, fileName);
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        if (!error) {
+            prs2();
+            if (!error) {
+                outputOnlyIntermediate();
+                outputOnlyListing();
+                outputOnlyObjectCode();
+                makeListingGood();
+                fileHandler = new FilesHandler();
+                try {
+                    fileHandler.saveObjectFile(listingFile, ObjectFile, fileName);
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            } else
+                outputOnlyIntermediate();
+        } else
+            outputOnlyIntermediate();
+    }
+
+    private void outputOnlyObjectCode() {
+        System.out.println("------------");
+        System.out.println(ObjectFile);
+    }
+
+    private void outputOnlyListing() {
+        System.out.println("------------");
+        System.out.println("The Listing file");
+        for (int i = 0; i < listingFile.length; i++) {
+            System.out.println(listingFile[i][0] + "   " + makeItGood2(listingFile[i][1]) + "   " + listingFile[i][2]);
+        }
+    }
+
+    private void outputOnlyIntermediate() {
+        System.out.println("The Intermidiate file :");
+        if (error) {
+            for (int i = 0; i < intermediateFile.length; i++) {
+                if (errorIndex == i)
+                    System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1] + "   " + errorMessage);
+                else
+                    System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1]);
+            }
+        } else {
+            for (int i = 0; i < intermediateFile.length; i++) {
+                System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1]);
+            }
         }
     }
 
     private void checkSpaces(ArrayList<String> code2) {
         Pattern patternSpaces = Pattern.compile("(?i)(.{8})\\s(.{2,6})\\s{0,2}(.{0,18})(.{0,31})");
-        for(int i = 0; i < code2.size(); i++) {
-            if(!code2.get(i).startsWith(".")) {
-            Matcher matchSpace = patternSpaces.matcher(code2.get(i).replaceAll("\t", "    "));
-            if(matchSpace.find()) {
-                String lable = matchSpace.group(1);
-                String operation = matchSpace.group(2);
-                String operand = matchSpace.group(3);
-                if (lable != null) {
-                    lable = lable.trim();
-                    if(lable.contains(" ")){
-                        Exception e = new Exception("Syntax error in line : " + (i+1));
-                        e.printStackTrace();
-                        System.exit(0);
+        for (int i = 0; i < code2.size(); i++) {
+            if (!code2.get(i).startsWith(".")) {
+                Matcher matchSpace = patternSpaces.matcher(code2.get(i).replaceAll("\t", "    "));
+                if (matchSpace.find()) {
+                    String lable = matchSpace.group(1);
+                    String operation = matchSpace.group(2);
+                    String operand = matchSpace.group(3);
+                    if (lable != null) {
+                        lable = lable.trim();
+                        if (lable.contains(" ")) {
+                            // Exception e = new Exception("Syntax error in line
+                            // : " + (i+1));
+                            // e.printStackTrace();
+                            error = true;
+                            errorIndex = i;
+                            errorMessage = "Syntax error";
+                            // System.exit(0);
+                        }
+                    } else {
+                        // Exception e = new Exception("Syntax error in line : "
+                        // + (i+1));
+                        // e.printStackTrace();
+                        error = true;
+                        errorIndex = i;
+                        errorMessage = "Syntax error";
+                        // System.exit(0);
                     }
+                    if (operation == null) {
+                        // Exception e = new Exception("There is no operation in
+                        // line : " + (i+1));
+                        // e.printStackTrace();
+                        error = true;
+                        errorIndex = i;
+                        errorMessage = "There is no operation";
+                        // System.exit(0);
+                    }
+                    
                 } else {
-                    Exception e = new Exception("Syntax error in line : " + (i+1));
-                    e.printStackTrace();
-                    System.exit(0);
+                    // Exception e = new Exception("Syntax error in line : " +
+                    // (i+1));
+                    // e.printStackTrace();
+                    error = true;
+                    errorIndex = i;
+                    errorMessage = "Syntax error";
+                    // System.exit(0);
                 }
-                if(operation == null) {
-                    Exception e = new Exception("There is no operation in line : " + (i+1));
-                    e.printStackTrace();
-                    System.exit(0);
-                }
-                if (operand != null) {
-                    operand = operand.trim();
-                    if(operand.contains(" ")){
-                        Exception e = new Exception("Syntax error in line : " + (i+1));
-                        e.printStackTrace();
-                        System.exit(0);
-                    }
-                }
-            } else {
-                Exception e = new Exception("Syntax error in line : " + (i+1));
-                e.printStackTrace();
-                System.exit(0);
             }
-        }
         }
     }
 
@@ -140,9 +190,13 @@ public class Process {
             start++;
         }
         if (!code.get(code.size() - 1).toLowerCase().contains("end")) {
-            Exception e = new Exception("There isn't end statement in  the program");
-            e.printStackTrace();
-            System.exit(0);
+            // Exception e = new Exception("There isn't end statement in the
+            // program");
+            // e.printStackTrace();
+            // System.exit(0);
+            error = true;
+            errorIndex = code.size() - 1;
+            errorMessage = "There isn't end statement in  the program";
         }
         pattern = Pattern.compile("(?i)(\\w+)?\\s+(\\w+)\\s*(.+)?");
         matcher = pattern.matcher(code.get(start).toLowerCase());
@@ -151,18 +205,25 @@ public class Process {
                 startingAddress = convert.hexaToDecimal(matcher.group(3).trim());
                 LOCCRT = startingAddress;
                 if ((startingAddress + "").length() > 4) {
-                    Exception e = new Exception("Out of Range Address");
-                    e.printStackTrace();
-                    System.exit(0);
+                    // Exception e = new Exception("Out of Range Address");
+                    // e.printStackTrace();
+                    // System.exit(0);
+                    error = true;
+                    errorIndex = 0;
+                    errorMessage = "Out of Range Address";
                 }
                 intermediateFile[start][1] = code.get(start);
                 intermediateFile[start][0] = makeGoodShape(convert.decimalToHexa(startingAddress));
             } else {
                 LOCCRT = 0;
-                Exception e = new Exception("Invalid Operation Code : The operation : " + matcher.group(2) + " in line "
-                        + 1 + " is Undefiend it should be START");
-                e.printStackTrace();
-                System.exit(0);
+                // Exception e = new Exception("Invalid Operation Code : The
+                // operation : " + matcher.group(2) + " in line "
+                // + 1 + " is Undefiend it should be START");
+                // e.printStackTrace();
+                // System.exit(0);
+                error = true;
+                errorIndex = 0;
+                errorMessage = "Undefiend it should be START";
             }
         }
         for (int i = start + 1; i < code.size() - 1; i++) {
@@ -172,11 +233,17 @@ public class Process {
                     intermediateFile[i][1] = code.get(i);
                     intermediateFile[i][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
                     if (matcher.group(1) != null) {
-                        if (SYMTable.contains(matcher.group(1).toLowerCase())) {
-                            Exception e = new Exception("There is the same Symbole before : The sympole "
-                                    + matcher.group(1) + " in line " + (i + 1) + " is duplicated");
-                            e.printStackTrace();
-                            System.exit(0);
+                        String tt = matcher.group(1).toLowerCase().trim();
+                        if (SYMTable.containsKey(tt)) {
+                            // Exception e = new Exception("There is the same
+                            // Symbole before : The sympole "
+                            // + matcher.group(1) + " in line " + (i + 1) + " is
+                            // duplicated");
+                            // e.printStackTrace();
+                            // System.exit(0);
+                            error = true;
+                            errorIndex = i;
+                            errorMessage = "There is the same Symbole before";
                         } else {
                             SYMTable.put(matcher.group(1).toLowerCase(), LOCCRT);
                         }
@@ -200,10 +267,14 @@ public class Process {
                                     : (word.length() - 3) / 2 + 1;
                         }
                     } else {
-                        Exception e = new Exception("Invalid Operation Code : The operation : " + operation
-                                + " in line " + (i + 1) + " is Undefiend");
-                        e.printStackTrace();
-                        System.exit(0);
+                        // Exception e = new Exception("Invalid Operation Code :
+                        // The operation : " + operation
+                        // + " in line " + (i + 1) + " is Undefiend");
+                        // e.printStackTrace();
+                        // System.exit(0);
+                        error = true;
+                        errorIndex = i;
+                        errorMessage = "Invalid Operation Code";
                     }
                 } else {
                     intermediateFile[i][1] = code.get(i);
@@ -240,6 +311,7 @@ public class Process {
             writeTheHeader(matcher.group(1), matcher.group(3).trim(), progLenght);
             intializeFirstTextrec(start + 1, matcher.group(2).toLowerCase(), matcher.group(3).trim());
         }
+        boolean openIT = false;
         int counter = 0;
         String tempObj = "";
         for (int i = start + 1; i < code.size(); i++) {
@@ -272,10 +344,14 @@ public class Process {
                                 isIndex = true;
                             } else {
                                 operandAddress = "0";
-                                Exception e = new Exception("Invalid Address : The Lable : " + operand.toUpperCase()
-                                        + " in line " + (i + 1) + " Didn't exsist");
-                                e.printStackTrace();
-                                System.exit(0);
+                                // Exception e = new Exception("Invalid Address
+                                // : The Lable : " + operand.toUpperCase()
+                                // + " in line " + (i + 1) + " Didn't exsist");
+                                // e.printStackTrace();
+                                // System.exit(0);
+                                error = true;
+                                errorIndex = i;
+                                errorMessage = "This Lable isn't defined";
                             }
                         } else {
                             listingFile[i][0] = intermediateFile[i][0].toUpperCase();
@@ -290,17 +366,18 @@ public class Process {
                         if (operation.equals("word")) {
                             listingFile[i][1] = convConstantWordToObjectCode(operand).toUpperCase();
                         } else {
-                            listingFile[i][1] = convConstantByteToObjectCode(operand).toUpperCase();
+                            listingFile[i][1] = convConstantByteToObjectCode(operand,i).toUpperCase();
                         }
                         counter++;
                     } else if (operation.equals("resw") || operation.equals("resb") || operation.equals("end")) {
                         listingFile[i][0] = intermediateFile[i][0].toUpperCase();
                         listingFile[i][1] = "";
                         listingFile[i][2] = intermediateFile[i][1];
-                        counter++;
+                        //counter++;
                     }
-                    if (counter > 10) {
+                    if (counter > 10 || openIT) {
                         counter = 1;
+                        openIT = false;
                         // writeTextRecordToObjectProg();
                         ObjectFile += goodLen(convert.decimalToHexa(
                                 (tempObj.length() % 2 == 0) ? tempObj.length() / 2 : tempObj.length() / 2 + 1))
@@ -309,6 +386,8 @@ public class Process {
                         tempObj = "";
                         intializeFirstTextrec(i, matcher.group(2).toLowerCase(), intermediateFile[i][0]);
                     }
+                    if(operation.equals("resw") || operation.equals("resb"))
+                        openIT = true;
                     // addToObjectF(listingFile[i][1]);
                     tempObj += listingFile[i][1];
                 } else {
@@ -365,15 +444,26 @@ public class Process {
         return res;
     }
 
-    private String convConstantByteToObjectCode(String operand) {
+    private String convConstantByteToObjectCode(String operand, int k) {
         String res = "";
         if (operand.startsWith("c")) {
             String value = operand.substring(2, operand.length() - 1).toUpperCase();
+            if(value.length() > 3){
+                error = true;
+                errorMessage = "Out of Range";
+                errorIndex = k;
+            }
             for (int i = 0; i < value.length(); i++) {
                 res += Integer.toHexString((int) value.charAt(i));
             }
         } else if (operand.startsWith("x")) {
-            return operand.substring(2, operand.length() - 1);
+            String value = operand.substring(2, operand.length() - 1);
+            if(value.length() > 6){
+                error = true;
+                errorMessage = "Out of Range";
+                errorIndex = k;
+            }
+            return value;
         }
         return res;
     }
@@ -439,16 +529,18 @@ public class Process {
      */
 
     private void intializeFirstTextrec(int i2, String operation, String address) {
-        if (!operation.equals("resw") && !operation.equals("resb")) {
+        if (!operation.equals("resw") && !operation.equals("resb") && !operation.equals("end")) {
             ObjectFile += System.lineSeparator() + "T";
             for (int i = 0; i < 6 - address.length(); i++)
                 ObjectFile += "0";
             ObjectFile += address.toUpperCase();
         } else {
-            i2++;
+            if(!operation.equals("end")){
+                i2++;
             matcher = pattern.matcher(intermediateFile[i2][1]);
             if (matcher.find()) {
                 intializeFirstTextrec(i2, matcher.group(2).toLowerCase(), intermediateFile[i2][0]);
+            }
             }
         }
     }
@@ -481,25 +573,28 @@ public class Process {
         fileCho.showOpenDialog(frame);
         File getFile = fileCho.getSelectedFile();
         String fileName = getFile.getName();
-        ArrayList<String> code = fileHandler
-                .readFile(getFile);
+        ArrayList<String> code = fileHandler.readFile(getFile);
         for (String x : code)
             System.out.println(x);
         Process pross = new Process(code, fileName);
-        String[][] y = pross.intermediateFile;
-        System.out.println("The Intermidiate file :");
-        for (int i = 0; i < y.length; i++) {
-            System.out.println(y[i][0] + "   " + y[i][1]);
-        }
-        System.out.println("------------");
-        System.out.println("The Listing file");
-        String[][] z = pross.listingFile;
-        for (int i = 0; i < y.length; i++) {
-            System.out.println(z[i][0] + "   " + pross.makeItGood2(z[i][1]) + "   " + z[i][2]);
-        }
-        System.out.println("------------");
-        System.out.println(pross.ObjectFile);
+        // String[][] y = pross.intermediateFile;
+        // System.out.println("The Intermidiate file :");
+        // for (int i = 0; i < y.length; i++) {
+        // System.out.println(y[i][0] + " " + y[i][1]);
+        // }
+        // System.out.println("------------");
+        // System.out.println("The Listing file");
+        // String[][] z = pross.listingFile;
+        // for (int i = 0; i < z.length; i++) {
+        // System.out.println(z[i][0] + " " + pross.makeItGood2(z[i][1]) + " " +
+        // z[i][2]);
+        // }
+        // System.out.println("------------");
+        // System.out.println(pross.ObjectFile);
         btn.setEditable(false);
-        btn.setText("Done");
+        if (pross.error)
+            btn.setText("Error");
+        else
+            btn.setText("Done");
     }
 }

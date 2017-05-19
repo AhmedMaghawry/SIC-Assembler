@@ -12,6 +12,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JTextField;
 
+import Symbols.IntermediateFile;
 import Symbols.Literal;
 
 public class Process {
@@ -22,7 +23,7 @@ public class Process {
     boolean error = false;
     String errorMessage;
     int errorIndex;
-    String[][] intermediateFile;
+    IntermediateFile intermediateFile; //become 2D arraylist
     String[][] listingFile;
     String ObjectFile = "";
     Hashtable<String, Integer> OPTable;
@@ -43,8 +44,9 @@ public class Process {
         OPTable = new Hashtable<String, Integer>();
         SYMTable = new Hashtable<String, Integer>();
         LITTable = new Hashtable<String, Literal>();/*Raafat **Key is Hex String of the literal Value , Value is Literal object ** */
-        intermediateFile = new String[code.size()][2];
-        listingFile = new String[code.size()][3];
+        //intermediateFile = new String[code.size()][2];
+        intermediateFile = new IntermediateFile();
+      //  listingFile = new String[code.size()][3];
         fillOPTable();
         prs1();
         if (!error) {
@@ -83,15 +85,18 @@ public class Process {
     private void outputOnlyIntermediate() {
         System.out.println("The Intermidiate file :");
         if (error) {
-            for (int i = 0; i < intermediateFile.length; i++) {
+            for (int i = 0; i < intermediateFile.size(); i++) {
                 if (errorIndex == i)
-                    System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1] + "   " + errorMessage);
+                    //System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1] + "   " + errorMessage);
+                	System.out.println(intermediateFile.get(i,0) + "   " + intermediateFile.get(i,1) + "   " + errorMessage);
                 else
-                    System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1]);
+                   // System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1]);
+                	System.out.println(intermediateFile.get(i,0) + "   " + intermediateFile.get(i,1));
             }
         } else {
-            for (int i = 0; i < intermediateFile.length; i++) {
-                System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1]);
+            for (int i = 0; i < intermediateFile.size(); i++) {
+               // System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1]);
+            	  System.out.println(intermediateFile.get(i,0) + "   " + intermediateFile.get(i,1));
             }
         }
     }
@@ -189,8 +194,11 @@ public class Process {
 
     void prs1() {
         while (code.get(start).contains(".")) {
-            intermediateFile[start][1] = code.get(start);
-            intermediateFile[start][0] = "";
+        	intermediateFile.add("FirstElement", "");
+           // intermediateFile[start][1] = code.get(start);
+        	intermediateFile.add("SecondElement", code.get(start));
+           // intermediateFile[start][0] = "";
+        	
             start++;
         }
         if (!code.get(code.size() - 1).toLowerCase().contains("end")) {
@@ -216,8 +224,10 @@ public class Process {
                     errorIndex = 0;
                     errorMessage = "Out of Range Address";
                 }
-                intermediateFile[start][1] = code.get(start);
-                intermediateFile[start][0] = makeGoodShape(convert.decimalToHexa(startingAddress));
+                //intermediateFile[start][1] = code.get(start);
+                //intermediateFile[start][0] = makeGoodShape(convert.decimalToHexa(startingAddress));
+                intermediateFile.add("FirstElement", makeGoodShape(convert.decimalToHexa(startingAddress)));
+                intermediateFile.add("SecondElement", code.get(start));
             } else {
                 LOCCRT = 0;
                 // Exception e = new Exception("Invalid Operation Code : The
@@ -234,8 +244,10 @@ public class Process {
             matcher = pattern.matcher(code.get(i).toLowerCase());
             if (matcher.find()) {
                 if (!code.get(i).contains(".")) {
-                    intermediateFile[i][1] = code.get(i);
-                    intermediateFile[i][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
+                   //intermediateFile[i][1] = code.get(i);
+                   // intermediateFile[i][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
+                    intermediateFile.add("FirstElement", convert.decimalToHexa(LOCCRT) + "");	
+                    intermediateFile.add("SecondElement", code.get(i));
                     if (matcher.group(1) != null) {
                         String tt = matcher.group(1).toLowerCase().trim();
                         if (SYMTable.containsKey(tt)) {
@@ -330,16 +342,22 @@ public class Process {
                         errorMessage = "Invalid Operation Code";
                     }
                 } else {
-                    intermediateFile[i][1] = code.get(i);
-                    intermediateFile[i][0] = "";
+                   // intermediateFile[i][1] = code.get(i);
+                  //  intermediateFile[i][0] = "";
+                    intermediateFile.add("FirstElement", "");
+                    intermediateFile.add("SecondElement", code.get(i));
                 }
             } else {
-                intermediateFile[i][1] = code.get(i);
-                intermediateFile[i][0] = "";
+                //intermediateFile[i][1] = code.get(i);
+                //intermediateFile[i][0] = "";
+                intermediateFile.add("FirstElement", "");
+                intermediateFile.add("SecondElement", code.get(i));
             }
         }//for
-        intermediateFile[code.size() - 1][1] = code.get(code.size() - 1);
-        intermediateFile[code.size() - 1][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
+       // intermediateFile[code.size() - 1][1] = code.get(code.size() - 1);
+       // intermediateFile[code.size() - 1][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
+        intermediateFile.add("FirstElement", makeGoodShape(convert.decimalToHexa(LOCCRT) + ""));
+        intermediateFile.add("SecondElement", code.get(code.size() - 1));
         progLenght = LOCCRT - startingAddress;
     }
 
@@ -353,13 +371,15 @@ public class Process {
     }
 
     void prs2() {
-        String firstLine = intermediateFile[start][1];
+    	listingFile = new String[intermediateFile.size()][3];
+        //String firstLine = intermediateFile[start][1];
+    	String firstLine = intermediateFile.get(start, 1);
         matcher = pattern.matcher(firstLine);
         if (matcher.find()) {
             if (matcher.group(2).toLowerCase().equals("start")) {
-                listingFile[start][0] = intermediateFile[start][0].toUpperCase();
-                listingFile[start][1] = "";
-                listingFile[start][2] = intermediateFile[start][1];
+                listingFile[start][0] = intermediateFile.get(start,0).toUpperCase();
+                listingFile[start][1] = "";                
+                listingFile[start][2] = intermediateFile.get(start, 1);                
             }
             writeTheHeader(matcher.group(1), matcher.group(3).trim(), progLenght);
             intializeFirstTextrec(start + 1, matcher.group(2).toLowerCase(), matcher.group(3).trim());
@@ -367,10 +387,10 @@ public class Process {
         boolean openIT = false;
         int counter = 0;
         String tempObj = "";
-        for (int i = start + 1; i < code.size(); i++) {
-            matcher = pattern.matcher(code.get(i).toLowerCase());
+        for (int i = start + 1; i < intermediateFile.size(); i++) {
+            matcher = pattern.matcher(intermediateFile.get(i,1).toLowerCase());
             if (matcher.find()) {
-                if (!code.get(i).startsWith(".")) {
+                if (!intermediateFile.get(i,1).startsWith(".")) {
                     String operation = matcher.group(2).toLowerCase();
                     // String sympole = (matcher.group(1) != null)?
                     // matcher.group(1).toLowerCase() : null;
@@ -382,16 +402,22 @@ public class Process {
                         String operandAddress;
                         if (operand != null) {
                             if (SYMTable.containsKey(operand)) {
-                                listingFile[i][0] = intermediateFile[i][0].toUpperCase();
-                                listingFile[i][2] = intermediateFile[i][1];
+                                //listingFile[i][0] = intermediateFile[i][0].toUpperCase();
+                            	listingFile[i][0] = intermediateFile.get(i, 0).toUpperCase();
+                                //listingFile[i][2] = intermediateFile[i][1];
+                            	listingFile[i][2] = intermediateFile.get(i,1);
                                 operandAddress = convert.decimalToHexa(SYMTable.get(operand)) + "";
                             } else if (operand.toLowerCase().contains("0x")) {
-                                listingFile[i][0] = intermediateFile[i][0].toUpperCase();
-                                listingFile[i][2] = intermediateFile[i][1];
+                            	//listingFile[i][0] = intermediateFile[i][0].toUpperCase();
+                            	listingFile[i][0] = intermediateFile.get(i, 0).toUpperCase();
+                                //listingFile[i][2] = intermediateFile[i][1];
+                            	listingFile[i][2] = intermediateFile.get(i,1);
                                 operandAddress = operand.substring(2, operand.length());
                             } else if (operand.toLowerCase().contains(",x")) {
-                                listingFile[i][0] = intermediateFile[i][0].toUpperCase();
-                                listingFile[i][2] = intermediateFile[i][1];
+                            	//listingFile[i][0] = intermediateFile[i][0].toUpperCase();
+                            	listingFile[i][0] = intermediateFile.get(i, 0).toUpperCase();
+                                //listingFile[i][2] = intermediateFile[i][1];
+                            	listingFile[i][2] = intermediateFile.get(i,1);
                                 operandAddress = convert
                                         .decimalToHexa(SYMTable.get(operand.substring(0, operand.length() - 2))) + "";
                                 isIndex = true;
@@ -407,15 +433,19 @@ public class Process {
                                 errorMessage = "This Lable isn't defined";
                             }
                         } else {
-                            listingFile[i][0] = intermediateFile[i][0].toUpperCase();
-                            listingFile[i][2] = intermediateFile[i][1];
+                        	//listingFile[i][0] = intermediateFile[i][0].toUpperCase();
+                        	listingFile[i][0] = intermediateFile.get(i, 0).toUpperCase();
+                            //listingFile[i][2] = intermediateFile[i][1];
+                        	listingFile[i][2] = intermediateFile.get(i,1);
                             operandAddress = "0";
                         }
                         listingFile[i][1] = assembletheCode(operation, operandAddress).toUpperCase();
                         counter++;
                     } else if (operation.equals("word") || operation.equals("byte")) {
-                        listingFile[i][0] = intermediateFile[i][0].toUpperCase();
-                        listingFile[i][2] = intermediateFile[i][1];
+                    	//listingFile[i][0] = intermediateFile[i][0].toUpperCase();
+                    	listingFile[i][0] = intermediateFile.get(i, 0).toUpperCase();
+                        //listingFile[i][2] = intermediateFile[i][1];
+                    	listingFile[i][2] = intermediateFile.get(i,1);
                         if (operation.equals("word")) {
                             listingFile[i][1] = convConstantWordToObjectCode(operand).toUpperCase();
                         } else {
@@ -423,9 +453,9 @@ public class Process {
                         }
                         counter++;
                     } else if (operation.equals("resw") || operation.equals("resb") || operation.equals("end")) {
-                        listingFile[i][0] = intermediateFile[i][0].toUpperCase();
+                    	listingFile[i][0] = intermediateFile.get(i, 0).toUpperCase();
                         listingFile[i][1] = "";
-                        listingFile[i][2] = intermediateFile[i][1];
+                        listingFile[i][2] = intermediateFile.get(i,1);
                         //counter++;
                     }
                     if (counter > 10 || openIT) {
@@ -437,7 +467,7 @@ public class Process {
                                         .toUpperCase()
                                 + tempObj;
                         tempObj = "";
-                        intializeFirstTextrec(i, matcher.group(2).toLowerCase(), intermediateFile[i][0]);
+                        intializeFirstTextrec(i, matcher.group(2).toLowerCase(), intermediateFile.get(i, 0));
                     }
                     if(operation.equals("resw") || operation.equals("resb"))
                         openIT = true;
@@ -590,9 +620,11 @@ public class Process {
         } else {
             if(!operation.equals("end")){
                 i2++;
-            matcher = pattern.matcher(intermediateFile[i2][1]);
+            //matcher = pattern.matcher(intermediateFile[i2][1]);
+                matcher = pattern.matcher(intermediateFile.get(i2, 1));
             if (matcher.find()) {
-                intializeFirstTextrec(i2, matcher.group(2).toLowerCase(), intermediateFile[i2][0]);
+                //intializeFirstTextrec(i2, matcher.group(2).toLowerCase(), intermediateFile[i2][0]);
+            	intializeFirstTextrec(i2, matcher.group(2).toLowerCase(), intermediateFile.get(i2, 0));
             }
             }
         }

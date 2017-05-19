@@ -17,6 +17,10 @@ public class Converter {
     public String decimalToHexa(int value) {
         return Integer.toHexString(value);
     }
+    /*Raafat*/
+    public String decimalToHexa(String value) {
+        return Integer.toHexString(Integer.parseInt(value));
+    }
     
     public String decimalToBin(int value) {
         return Integer.toBinaryString(value);

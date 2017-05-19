@@ -12,6 +12,8 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JTextField;
 
+import Symbols.Literal;
+
 public class Process {
 
     ArrayList<String> code;
@@ -25,6 +27,7 @@ public class Process {
     String ObjectFile = "";
     Hashtable<String, Integer> OPTable;
     Hashtable<String, Integer> SYMTable;
+    Hashtable<String, Literal> LITTable; /*Raafat*/ /* Literal value is the key , Literal object is the value of hash table)*/   
     int LOCCRT;
     int startingAddress = 0;
     int progLenght;
@@ -39,6 +42,7 @@ public class Process {
         convert = new Converter();
         OPTable = new Hashtable<String, Integer>();
         SYMTable = new Hashtable<String, Integer>();
+        LITTable = new Hashtable<String, Literal>();/*Raafat **Key is Hex String of the literal Value , Value is Literal object ** */
         intermediateFile = new String[code.size()][2];
         listingFile = new String[code.size()][3];
         fillOPTable();
@@ -251,6 +255,53 @@ public class Process {
                     String operation = matcher.group(2).toLowerCase();
                     if (OPTable.containsKey(operation)) {
                         LOCCRT += 3;
+                        /*Raafat*/
+                        String operand = matcher.group(3);
+                        //If is Literal
+                        if(operand.startsWith("=")){
+                        	Literal lit = new Literal();
+                        	String LitName = operand;
+                        	String LitValue; //Key of hashtable **Hex String**
+                        	Integer LitLength;
+                        	lit.setName(LitName); //Set Literal name
+                        	StringBuilder sb = new StringBuilder(operand); 
+                        	sb.deleteCharAt(0);//delete "=" from the string of Literal
+                        	operand = sb.toString(); // Literal without "="
+                        	char c = operand.charAt(0);
+                        	boolean isDigit = (c >= '0' && c <= '9'); //Do the literal starts with digit
+                        	//If the Literal is of WORD type
+                        	if(operand.startsWith("+") || operand.startsWith("-") || isDigit){   		 		
+                        	    LitLength = 3;
+                        		LitValue = convert.decimalToHexa(operand);
+                        		lit.setValue(LitValue);
+                        		lit.setLength(LitLength);  
+                        		if(!LITTable.containsKey(LitValue)){
+                        		  LITTable.put(LitValue, lit);	
+                        		}
+                        		//If the literal of Type byte character
+                        	}else if(operand.toLowerCase().startsWith("c")){
+                        		LitLength = operand.length()-3;
+                        		LitValue = convConstantByteToObjectCode(operand,i);
+                        		lit.setValue(LitValue);
+                        		lit.setLength(LitLength);
+                        		if(!LITTable.containsKey(LitValue)){
+                          		  LITTable.put(LitValue, lit);	
+                          		}
+                        	}else if(operand.toLowerCase().startsWith("x")){
+                        		LitLength = ((operand.length() - 3) % 2 == 0) ? (operand.length() - 3) / 2 : (operand.length() - 3) / 2 + 1;
+                        		LitValue = convConstantByteToObjectCode(operand,i);
+                        		lit.setValue(LitValue);
+                        		lit.setLength(LitLength);
+                        		if(!LITTable.containsKey(LitValue)){
+                          		  LITTable.put(LitValue, lit);	
+                          		}
+                        	}else{
+                        		error = true;
+                                errorMessage = "Wrong Literal Format";
+                                errorIndex = i;
+                        	}//error 
+                        }//if  Literal                      
+                        
                     } else if (operation.equals("word")) {
                         LOCCRT += 3;
                     } else if (operation.equals("resw")) {
@@ -266,6 +317,8 @@ public class Process {
                             LOCCRT += ((word.length() - 3) % 2 == 0) ? (word.length() - 3) / 2
                                     : (word.length() - 3) / 2 + 1;
                         }
+                    }else if(operation.equals("ltorg")){
+                    	            
                     } else {
                         // Exception e = new Exception("Invalid Operation Code :
                         // The operation : " + operation
@@ -284,7 +337,7 @@ public class Process {
                 intermediateFile[i][1] = code.get(i);
                 intermediateFile[i][0] = "";
             }
-        }
+        }//for
         intermediateFile[code.size() - 1][1] = code.get(code.size() - 1);
         intermediateFile[code.size() - 1][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
         progLenght = LOCCRT - startingAddress;

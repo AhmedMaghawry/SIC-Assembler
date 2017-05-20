@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -210,7 +212,8 @@ public class Process {
             errorIndex = code.size() - 1;
             errorMessage = "There isn't end statement in  the program";
         }
-        pattern = Pattern.compile("(?i)(\\w+)?\\s+(\\w+)\\s*(.+)?");
+        //pattern = Pattern.compile("(?i)(\\w+)?\\s+(\\w+)\\s*(.+)?");
+        pattern = Pattern.compile("(?i)(\\\\w+|\\*)?\\\\s+(\\\\w+|\\=c'\\w+'|\\=x'\\w+')\\\\s*(.+)?");
         matcher = pattern.matcher(code.get(start).toLowerCase());
         if (matcher.find()) {
             if (matcher.group(2).toLowerCase().equals("start")) {
@@ -246,7 +249,11 @@ public class Process {
                 if (!code.get(i).contains(".")) {
                    //intermediateFile[i][1] = code.get(i);
                    // intermediateFile[i][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
-                    intermediateFile.add("FirstElement", convert.decimalToHexa(LOCCRT) + "");	
+                    if(containsLTORG_EQU_ORG(code.get(i))){
+                    	intermediateFile.add("FirstElement", "");	
+                    }else{
+                    	intermediateFile.add("FirstElement", makeGoodShape(convert.decimalToHexa(LOCCRT) + ""));	
+                    }                		
                     intermediateFile.add("SecondElement", code.get(i));
                     if (matcher.group(1) != null) {
                         String tt = matcher.group(1).toLowerCase().trim();
@@ -270,7 +277,7 @@ public class Process {
                         /*Raafat*/
                         String operand = matcher.group(3);
                         //If is Literal
-                        if(operand.startsWith("=")){
+                        if(operand != null && operand.startsWith("=")){
                         	Literal lit = new Literal();
                         	String LitName = operand;
                         	String LitValue; //Key of hashtable **Hex String**
@@ -329,8 +336,8 @@ public class Process {
                             LOCCRT += ((word.length() - 3) % 2 == 0) ? (word.length() - 3) / 2
                                     : (word.length() - 3) / 2 + 1;
                         }
-                    }else if(operation.equals("ltorg")){
-                    	            
+                    }else if(operation.toLowerCase().equals("ltorg") || operation.toLowerCase().equals("end") ){
+                    	  		LTORGisMET();         
                     } else {
                         // Exception e = new Exception("Invalid Operation Code :
                         // The operation : " + operation
@@ -358,9 +365,29 @@ public class Process {
        // intermediateFile[code.size() - 1][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
         intermediateFile.add("FirstElement", makeGoodShape(convert.decimalToHexa(LOCCRT) + ""));
         intermediateFile.add("SecondElement", code.get(code.size() - 1));
+        LTORGisMET();
         progLenght = LOCCRT - startingAddress;
     }
-
+    private void LTORGisMET(){
+    	Iterator <Map.Entry<String,Literal>> it = LITTable.entrySet().iterator();
+    	while (it.hasNext()) {
+    		Map.Entry<String,Literal> entry = it.next();                              
+    	    Literal lit = entry.getValue();
+    	    if(lit.getAddress() == null){
+    	    	lit.setAddress(LOCCRT);
+    	    	
+    	    	intermediateFile.add("FirstElement", makeGoodShape(convert.decimalToHexa(LOCCRT) + ""));
+    	    	intermediateFile.add("SecondElement", "*        "+lit.getName());
+    	    	LOCCRT += lit.getLength();
+    	    }//if
+    	}//While 
+    }//method
+    private boolean containsLTORG_EQU_ORG(String code){
+    	if(code.toLowerCase().contains("ltorg") || code.toLowerCase().contains("equ") || code.toLowerCase().contains("org")){
+    		return true;
+    	}//if
+    	return false;
+    }
     private String makeGoodShape(String string) {
         String res = "";
         for (int i = 0; i < 6 - string.length(); i++) {
@@ -369,6 +396,22 @@ public class Process {
         res += string;
         return res;
     }
+    private String getLiteralHexa(String operand){
+    	String LitValue = null;
+    	char c = operand.charAt(0);
+    	boolean isDigit = (c >= '0' && c <= '9'); //Do the literal starts with digit
+    	if(operand.startsWith("+") || operand.startsWith("-")||isDigit){   		 		
+    	    
+    		LitValue = convert.decimalToHexa(operand);
+    		
+    		//If the literal of Type byte character
+    	}else if(operand.toLowerCase().startsWith("c")){    		
+    		LitValue = convConstantByteToObjectCode(operand,15);    		
+    	}else if(operand.toLowerCase().startsWith("x")){
+    		LitValue = convConstantByteToObjectCode(operand,15);
+    	}	
+    	return LitValue;
+    }//method
 
     void prs2() {
     	listingFile = new String[intermediateFile.size()][3];
@@ -388,7 +431,7 @@ public class Process {
         int counter = 0;
         String tempObj = "";
         for (int i = start + 1; i < intermediateFile.size(); i++) {
-            matcher = pattern.matcher(intermediateFile.get(i,1).toLowerCase());
+            matcher = pattern.matcher(intermediateFile.get(i,1));
             if (matcher.find()) {
                 if (!intermediateFile.get(i,1).startsWith(".")) {
                     String operation = matcher.group(2).toLowerCase();
@@ -421,6 +464,19 @@ public class Process {
                                 operandAddress = convert
                                         .decimalToHexa(SYMTable.get(operand.substring(0, operand.length() - 2))) + "";
                                 isIndex = true;
+                            } else if (operand.toLowerCase().startsWith("=")) {
+                            	StringBuilder sb =  new StringBuilder(operand);
+                            	sb.deleteCharAt(0);
+                            	String operand2 = sb.toString();
+                            	//listingFile[i][0] = intermediateFile[i][0].toUpperCase();
+                            	listingFile[i][0] = intermediateFile.get(i, 0).toUpperCase();
+                                //listingFile[i][1] = ;
+                            	listingFile[i][2] = intermediateFile.get(i,1);
+                            	String LitValue = getLiteralHexa(operand2);
+                            	Literal lit = LITTable.get(LitValue);
+                                operandAddress = lit.getAddress().toString();
+                                isIndex = true;
+                            
                             } else {
                                 operandAddress = "0";
                                 // Exception e = new Exception("Invalid Address
@@ -457,7 +513,23 @@ public class Process {
                         listingFile[i][1] = "";
                         listingFile[i][2] = intermediateFile.get(i,1);
                         //counter++;
-                    }
+                    
+	                } else if (operation.startsWith("=")) {
+	                	StringBuilder sb =  new StringBuilder(operation);
+                    	sb.deleteCharAt(0);
+                    	String operand2 = sb.toString();
+	                	listingFile[i][0] = intermediateFile.get(i, 0).toUpperCase();
+	                    String LitValue = getLiteralHexa(operand2);	                    
+	                	listingFile[i][1] = LitValue;
+	                    listingFile[i][2] = "*        "+intermediateFile.get(i,1);
+	                    //counter++;
+	                
+                } else if (operation.equals("ltorg")) {
+                	listingFile[i][0] = "";
+                    listingFile[i][1] = "";
+                    listingFile[i][2] = intermediateFile.get(i,1);
+                    //counter++;
+                }
                     if (counter > 10 || openIT) {
                         counter = 1;
                         openIT = false;
@@ -479,7 +551,7 @@ public class Process {
                     listingFile[i][2] = "";
                 }
             }
-        }
+        }//for
         if (counter != 0) {
             ObjectFile += goodLen(convert
                     .decimalToHexa((tempObj.length() % 2 == 0) ? tempObj.length() / 2 : tempObj.length() / 2 + 1))

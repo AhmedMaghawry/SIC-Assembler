@@ -213,7 +213,9 @@ public class Process {
             errorMessage = "There isn't end statement in  the program";
         }
         //pattern = Pattern.compile("(?i)(\\w+)?\\s+(\\w+)\\s*(.+)?");
-        pattern = Pattern.compile("(?i)(\\\\w+|\\*)?\\\\s+(\\\\w+|\\=c'\\w+'|\\=x'\\w+')\\\\s*(.+)?");
+        //pattern = Pattern.compile("(?i)(\\w+|.)?\\s+(\\w+|\\=+\\w+'\\w+')\\s*(.+)?");
+        
+        pattern = Pattern.compile("(?i)(\\w+|.)?\\s+(\\w+|\\=+\\w'\\w+'|\\=.\\d+|\\=\\d)\\s*(.+)?");
         matcher = pattern.matcher(code.get(start).toLowerCase());
         if (matcher.find()) {
             if (matcher.group(2).toLowerCase().equals("start")) {
@@ -521,7 +523,7 @@ public class Process {
 	                	listingFile[i][0] = intermediateFile.get(i, 0).toUpperCase();
 	                    String LitValue = getLiteralHexa(operand2);	                    
 	                	listingFile[i][1] = LitValue;
-	                    listingFile[i][2] = "*        "+intermediateFile.get(i,1);
+	                    listingFile[i][2] = intermediateFile.get(i,1);
 	                    //counter++;
 	                
                 } else if (operation.equals("ltorg")) {

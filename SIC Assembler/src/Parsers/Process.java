@@ -260,18 +260,19 @@ public class Process {
                     if (matcher.group(1) != null) {
                         String tt = matcher.group(1).toLowerCase().trim();
                         if (SYMTable.containsKey(tt)) {
-                            // Exception e = new Exception("There is the same
-                            // Symbole before : The sympole "
-                            // + matcher.group(1) + " in line " + (i + 1) + " is
-                            // duplicated");
-                            // e.printStackTrace();
-                            // System.exit(0);
                             error = true;
-                            errorIndex = i;
+                            errorIndex = intermediateFile.size() - 1;
                             errorMessage = "There is the same Symbole before";
                         } else {
-                            SYMTable.put(matcher.group(1).toLowerCase(), LOCCRT);
-                        }
+                        	String operation = matcher.group(2).toLowerCase();
+                        	if(!operation.equals("equ")){
+                        	     SYMTable.put(matcher.group(1).toLowerCase(), LOCCRT);
+                        	}else{
+                        		//Evaluate then 
+                        		int EvaluatedValue = 0;
+                        		SYMTable.put(matcher.group(1).toLowerCase(), EvaluatedValue);
+                        	}//else
+                        }//else
                     }
                     String operation = matcher.group(2).toLowerCase();
                     if (OPTable.containsKey(operation)) {
@@ -319,14 +320,14 @@ public class Process {
                         	}else{
                         		error = true;
                                 errorMessage = "Wrong Literal Format";
-                                errorIndex = i;
+                                errorIndex = intermediateFile.size() - 1;
                         	}//error 
                         }//if  Literal                      
                         
                     } else if (operation.equals("word")) {
                         LOCCRT += 3;
                     } else if (operation.equals("resw")) {
-                        LOCCRT += 3 * Integer.parseInt(matcher.group(3).trim());
+                        LOCCRT +=  Integer.parseInt(matcher.group(3).trim());
                     } else if (operation.equals("resb")) {
                         LOCCRT += Integer.parseInt(matcher.group(3).trim());
                     } else if (operation.equals("byte")) {
@@ -339,7 +340,12 @@ public class Process {
                                     : (word.length() - 3) / 2 + 1;
                         }
                     }else if(operation.toLowerCase().equals("ltorg") || operation.toLowerCase().equals("end") ){
-                    	  		LTORGisMET();         
+                       	LTORGisMET();
+                    }else if(operation.toLowerCase().equals("org")){
+                	  		//Evaluate
+                    	int NewLOCCRT = 0;
+                    	LOCCRT = NewLOCCRT;
+                 
                     } else {
                         // Exception e = new Exception("Invalid Operation Code :
                         // The operation : " + operation
@@ -347,7 +353,7 @@ public class Process {
                         // e.printStackTrace();
                         // System.exit(0);
                         error = true;
-                        errorIndex = i;
+                        errorIndex = intermediateFile.size() - 1;
                         errorMessage = "Invalid Operation Code";
                     }
                 } else {
@@ -367,6 +373,7 @@ public class Process {
        // intermediateFile[code.size() - 1][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
         intermediateFile.add("FirstElement", makeGoodShape(convert.decimalToHexa(LOCCRT) + ""));
         intermediateFile.add("SecondElement", code.get(code.size() - 1));
+        LOCCRT += 3;
         LTORGisMET();
         progLenght = LOCCRT - startingAddress;
     }
@@ -476,8 +483,7 @@ public class Process {
                             	listingFile[i][2] = intermediateFile.get(i,1);
                             	String LitValue = getLiteralHexa(operand2);
                             	Literal lit = LITTable.get(LitValue);
-                                operandAddress = lit.getAddress().toString();
-                                isIndex = true;
+                                operandAddress = convert.decimalToHexa(lit.getAddress());                               
                             
                             } else {
                                 operandAddress = "0";

@@ -406,11 +406,14 @@ public class Process {
 	private String expresionEVAL(String operand) {
         String[] subs = operand.split("-");
         ArrayList<String> adds = new ArrayList<>();
-        adds.add(subs[0]);
+        String[] addsArre = subs[0].split("\\+");
+        for(int j = 0; j < addsArre.length; j++) {
+            adds.add(addsArre[j].trim());
+        }
         for(int i = 0; i < subs.length; i++) {
             subs[i] = subs[i].trim();
-            if(subs[i].contains("+")) {
-                String[] addsArr = subs[i].split("+");
+            if(subs[i].contains("\\+")) {
+                String[] addsArr = subs[i].split("\\+");
                 subs[i] = addsArr[0];
                 for(int j = 1; j < addsArr.length; j++) {
                     adds.add(addsArr[j].trim());
@@ -719,7 +722,7 @@ public class Process {
          * binary.substring(8, 12); res += convert.binToHexa(temp); res +=
          * convert.subHexa(operandAddress, currentAddress);
          */
-        String temp = convert.hexaToBin(operandAddress);
+    	String temp = convert.hexaToBin((operandAddress.length() > 4)?operandAddress.substring(operandAddress.length()-4):operandAddress);
         String triv = "";
         for (int i = 0; i < 16 - temp.length(); i++) {
             if (isIndex) {
@@ -781,7 +784,7 @@ public class Process {
                 matcher = pattern.matcher(intermediateFile.get(i2, 1));
             if (matcher.find()) {
                 //intializeFirstTextrec(i2, matcher.group(2).toLowerCase(), intermediateFile[i2][0]);
-            	intializeFirstTextrec(i2, matcher.group(2).toLowerCase(), intermediateFile.get(i2, 0));
+            	//intializeFirstTextrec(i2, matcher.group(2).toLowerCase(), intermediateFile.get(i2, 0));
             }
             }
         }

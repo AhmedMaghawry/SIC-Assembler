@@ -80,7 +80,7 @@ public class Process {
         System.out.println("------------");
         System.out.println("The Listing file");
         for (int i = 0; i < listingFile.length; i++) {
-            System.out.println(listingFile[i][0] + "   " + makeItGood2(listingFile[i][1]) + "   " + listingFile[i][2]);
+            System.out.println(listingFile[i][0].toUpperCase() + "   " + makeItGood2(listingFile[i][1]).toUpperCase()+ "   " + listingFile[i][2].toUpperCase());
         }
     }
 
@@ -90,15 +90,15 @@ public class Process {
             for (int i = 0; i < intermediateFile.size(); i++) {
                 if (errorIndex == i)
                     //System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1] + "   " + errorMessage);
-                	System.out.println(intermediateFile.get(i,0) + "   " + intermediateFile.get(i,1) + "   " + errorMessage);
+                	System.out.println(intermediateFile.get(i,0).toUpperCase() + "   " + intermediateFile.get(i,1).toUpperCase() + "   " + errorMessage);
                 else
                    // System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1]);
-                	System.out.println(intermediateFile.get(i,0) + "   " + intermediateFile.get(i,1));
+                	System.out.println(intermediateFile.get(i,0).toUpperCase() + "   " + intermediateFile.get(i,1).toUpperCase());
             }
         } else {
             for (int i = 0; i < intermediateFile.size(); i++) {
                // System.out.println(intermediateFile[i][0] + "   " + intermediateFile[i][1]);
-            	  System.out.println(intermediateFile.get(i,0) + "   " + intermediateFile.get(i,1));
+            	  System.out.println(intermediateFile.get(i,0).toUpperCase() + "   " + intermediateFile.get(i,1).toUpperCase());
             }
         }
     }
@@ -327,7 +327,7 @@ public class Process {
                     } else if (operation.equals("word")) {
                         LOCCRT += 3;
                     } else if (operation.equals("resw")) {
-                        LOCCRT +=  Integer.parseInt(matcher.group(3).trim());
+                        LOCCRT +=  3*Integer.parseInt(matcher.group(3).trim());
                     } else if (operation.equals("resb")) {
                         LOCCRT += Integer.parseInt(matcher.group(3).trim());
                     } else if (operation.equals("byte")) {

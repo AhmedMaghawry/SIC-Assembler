@@ -30,4 +30,9 @@ public class Converter {
         int res = hexaToDecimal(hexa1) - hexaToDecimal(hexa2);
         return decimalToHexa(res);
     }
+
+	public String addHexa(String hexa1, String hexa2) {
+		int res = hexaToDecimal(hexa1) + hexaToDecimal(hexa2);
+        return decimalToHexa(res);
+	}
 }

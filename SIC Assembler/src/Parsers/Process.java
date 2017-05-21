@@ -251,12 +251,14 @@ public class Process {
                 if (!code.get(i).contains(".")) {
                    //intermediateFile[i][1] = code.get(i);
                    // intermediateFile[i][0] = makeGoodShape(convert.decimalToHexa(LOCCRT) + "");
-                    if(containsLTORG_EQU_ORG(code.get(i))){
-                    	intermediateFile.add("FirstElement", "");	
-                    }else{
-                    	intermediateFile.add("FirstElement", makeGoodShape(convert.decimalToHexa(LOCCRT) + ""));	
-                    }                		
-                    intermediateFile.add("SecondElement", code.get(i));
+                    if(!containsEQU_ORG(code.get(i))){
+	                	if(containsLTORG(code.get(i))){
+	                    	intermediateFile.add("FirstElement", "");	
+	                    }else{
+	                    	intermediateFile.add("FirstElement", makeGoodShape(convert.decimalToHexa(LOCCRT) + ""));	
+	                    }                		
+	                    intermediateFile.add("SecondElement", code.get(i));
+                    }//!containsEQU(code.get(i))
                     if (matcher.group(1) != null) {
                         String tt = matcher.group(1).toLowerCase().trim();
                         if (SYMTable.containsKey(tt)) {
@@ -265,12 +267,22 @@ public class Process {
                             errorMessage = "There is the same Symbole before";
                         } else {
                         	String operation = matcher.group(2).toLowerCase();
-                        	if(!operation.equals("equ")){
+                        	if(!operation.contains("equ")){
                         	     SYMTable.put(matcher.group(1).toLowerCase(), LOCCRT);
                         	}else{
                         		//Evaluate then 
-                        		int EvaluatedValue = 0;
-                        		SYMTable.put(matcher.group(1).toLowerCase(), EvaluatedValue);
+                        		if(expresionEVAL(matcher.group(3).toUpperCase()) == null){
+                            		error = true;
+                                    errorIndex = intermediateFile.size();
+                                    errorMessage = "Invalid Expression Evaluated";
+                                    intermediateFile.add("FirstElement", "Error");
+	                        		intermediateFile.add("SecondElement", code.get(i));
+                            	}else{
+	                        		int EvaluatedValue = convert.hexaToDecimal(expresionEVAL(matcher.group(3).toUpperCase()));
+	                        		SYMTable.put(matcher.group(1).toLowerCase(), EvaluatedValue);
+	                        		intermediateFile.add("FirstElement", makeGoodShape(convert.decimalToHexa(EvaluatedValue) + ""));
+	                        		intermediateFile.add("SecondElement", code.get(i));
+                            	}//else
                         	}//else
                         }//else
                     }
@@ -327,7 +339,7 @@ public class Process {
                     } else if (operation.equals("word")) {
                         LOCCRT += 3;
                     } else if (operation.equals("resw")) {
-                        LOCCRT +=  3*Integer.parseInt(matcher.group(3).trim());
+                        LOCCRT +=  3 * Integer.parseInt(matcher.group(3).trim());
                     } else if (operation.equals("resb")) {
                         LOCCRT += Integer.parseInt(matcher.group(3).trim());
                     } else if (operation.equals("byte")) {
@@ -343,10 +355,17 @@ public class Process {
                        	LTORGisMET();
                     }else if(operation.toLowerCase().equals("org")){
                 	  		//Evaluate
-                    	int NewLOCCRT = 0;
-                    	LOCCRT = NewLOCCRT;
-                 
-                    } else {
+                    	if(expresionEVAL(matcher.group(2).toUpperCase()) == null){
+                    		error = true;
+                            errorIndex = intermediateFile.size() - 1;
+                            errorMessage = "Invalid Expression Evaluated";
+                    	}else{
+	                    	int EvaluatedValue = convert.hexaToDecimal(expresionEVAL(matcher.group(2).toUpperCase()));
+	                    	LOCCRT = EvaluatedValue;
+	                    	intermediateFile.add("FirstElement", makeGoodShape(convert.decimalToHexa(LOCCRT) + ""));
+	                		intermediateFile.add("SecondElement", code.get(i));
+                    	}//inner Else
+                    } else if(!operation.contains("equ")) {
                         // Exception e = new Exception("Invalid Operation Code :
                         // The operation : " + operation
                         // + " in line " + (i + 1) + " is Undefiend");
@@ -377,6 +396,64 @@ public class Process {
         LTORGisMET();
         progLenght = LOCCRT - startingAddress;
     }
+    private boolean containsEQU_ORG(String code) {
+    	if(code.toLowerCase().contains("equ") || code.toLowerCase().contains("org")){
+    		return true;
+    	}//if
+    	return false;
+	}
+
+	private String expresionEVAL(String operand) {
+        String[] subs = operand.split("-");
+        ArrayList<String> adds = new ArrayList<>();
+        adds.add(subs[0]);
+        for(int i = 0; i < subs.length; i++) {
+            subs[i] = subs[i].trim();
+            if(subs[i].contains("+")) {
+                String[] addsArr = subs[i].split("+");
+                subs[i] = addsArr[0];
+                for(int j = 1; j < addsArr.length; j++) {
+                    adds.add(addsArr[j].trim());
+                }
+            }
+        }
+        String res;
+        try{
+            res = convert.decimalToHexa(Integer.parseInt(adds.get(0)));
+        } catch(Exception e) {
+        	if(SYMTable.containsKey(adds.get(0).toLowerCase())){
+        		res = convert.decimalToHexa(SYMTable.get(adds.get(0).toLowerCase()));
+        	}else{
+        		return null;//Error
+        	}//else
+        }//catch
+        if(adds.size() > 1) {
+            for(int i = 1; i < adds.size(); i++) {
+                try{
+                    res = convert.addHexa(res, convert.decimalToHexa(Integer.parseInt(adds.get(i))));
+                } catch(Exception e) {
+                	if(SYMTable.containsKey(adds.get(i).toLowerCase())){
+                		res = convert.decimalToHexa(SYMTable.get(adds.get(i).toLowerCase()));
+                	}else{
+                		return null;//Error
+                	}//else
+                }
+            }
+        }
+        for(int i = 1; i < subs.length; i++) {
+            try{
+                res = convert.subHexa(res, convert.decimalToHexa(Integer.parseInt(subs[i])));
+            } catch(Exception e) {
+                
+                if(SYMTable.containsKey(subs[i].toLowerCase())){
+                	res = convert.subHexa(res, convert.decimalToHexa(SYMTable.get(subs[i].toLowerCase())));
+            	}else{
+            		return null;//Error
+            	}//else
+            }
+        }
+        return res;
+    }//Method
     private void LTORGisMET(){
     	Iterator <Map.Entry<String,Literal>> it = LITTable.entrySet().iterator();
     	while (it.hasNext()) {
@@ -391,8 +468,8 @@ public class Process {
     	    }//if
     	}//While 
     }//method
-    private boolean containsLTORG_EQU_ORG(String code){
-    	if(code.toLowerCase().contains("ltorg") || code.toLowerCase().contains("equ") || code.toLowerCase().contains("org")){
+    private boolean containsLTORG(String code){
+    	if(code.toLowerCase().contains("ltorg")){
     		return true;
     	}//if
     	return false;
@@ -422,7 +499,7 @@ public class Process {
     	return LitValue;
     }//method
 
-    void prs2() {
+    void prs2(){
     	listingFile = new String[intermediateFile.size()][3];
         //String firstLine = intermediateFile[start][1];
     	String firstLine = intermediateFile.get(start, 1);
@@ -516,7 +593,7 @@ public class Process {
                             listingFile[i][1] = convConstantByteToObjectCode(operand,i).toUpperCase();
                         }
                         counter++;
-                    } else if (operation.equals("resw") || operation.equals("resb") || operation.equals("end")) {
+                    } else if (operation.equals("org") || operation.equals("equ") || operation.equals("resw") || operation.equals("resb") || operation.equals("end")) {
                     	listingFile[i][0] = intermediateFile.get(i, 0).toUpperCase();
                         listingFile[i][1] = "";
                         listingFile[i][2] = intermediateFile.get(i,1);
@@ -532,12 +609,12 @@ public class Process {
 	                    listingFile[i][2] = intermediateFile.get(i,1);
 	                    //counter++;
 	                
-                } else if (operation.equals("ltorg")) {
-                	listingFile[i][0] = "";
-                    listingFile[i][1] = "";
-                    listingFile[i][2] = intermediateFile.get(i,1);
-                    //counter++;
-                }
+	                } else if (operation.equals("ltorg")) {
+	                	listingFile[i][0] = "";
+	                    listingFile[i][1] = "";
+	                    listingFile[i][2] = intermediateFile.get(i,1);
+	                    //counter++;
+	                }//else if
                     if (counter > 10 || openIT) {
                         counter = 1;
                         openIT = false;
@@ -553,7 +630,7 @@ public class Process {
                         openIT = true;
                     // addToObjectF(listingFile[i][1]);
                     tempObj += listingFile[i][1];
-                } else {
+                } else { //Comment
                     listingFile[i][0] = code.get(i);
                     listingFile[i][1] = "";
                     listingFile[i][2] = "";
